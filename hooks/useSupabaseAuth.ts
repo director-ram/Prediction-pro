@@ -303,15 +303,20 @@ export function useSupabaseAuth() {
     setError(null);
 
     try {
-      // First check if Google OAuth is properly configured
+      // Get the current URL for redirect
+      const currentUrl = window.location.origin;
+      
+      console.log('Attempting Google OAuth with redirect to:', currentUrl);
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: currentUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          }
+          },
+          skipBrowserRedirect: false
         }
       });
 
@@ -322,13 +327,15 @@ export function useSupabaseAuth() {
         let errorMessage = error.message;
         
         if (error.message.includes('OAuth')) {
-          errorMessage = 'Google authentication is not properly configured. Please contact support or try signing in with email instead.';
+          errorMessage = 'Google authentication is not properly configured. Please check the setup in Supabase dashboard.';
         } else if (error.message.includes('redirect')) {
-          errorMessage = 'Authentication redirect failed. Please try again or use email sign-in.';
+          errorMessage = 'Authentication redirect failed. Please check your redirect URLs in Google Console.';
         } else if (error.message.includes('popup')) {
           errorMessage = 'Pop-up was blocked. Please allow pop-ups for this site and try again.';
         } else if (error.message.includes('provider')) {
-          errorMessage = 'Google sign-in is currently unavailable. Please use email sign-in instead.';
+          errorMessage = 'Google sign-in is currently unavailable. Please check your Google OAuth configuration.';
+        } else if (error.message.includes('refused to connect')) {
+          errorMessage = 'Connection refused. Please check your Google OAuth client ID and redirect URLs.';
         }
         
         setError(errorMessage);
@@ -336,12 +343,14 @@ export function useSupabaseAuth() {
         return { success: false, error: errorMessage };
       }
 
+      console.log('Google OAuth initiated successfully:', data);
+      
       // Note: The actual sign-in completion will be handled by the auth state change listener
       // We don't set loading to false here because the redirect will happen
       return { success: true };
     } catch (error) {
       console.error('Unexpected error during Google sign-in:', error);
-      const errorMessage = 'Google sign-in is currently unavailable. Please try email sign-in instead.';
+      const errorMessage = 'Google sign-in is currently unavailable. Please check your configuration and try again.';
       setError(errorMessage);
       setLoading(false);
       return { success: false, error: errorMessage };
