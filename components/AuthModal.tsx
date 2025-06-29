@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import MobileWalletButton from './MobileWalletButton';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink, Info } from 'lucide-react';
+import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink, Info, CheckCircle } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModalProps) {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, loading, error } = useSupabaseAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, loading, error, user } = useSupabaseAuth();
   const { connected, publicKey } = useWallet();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -23,6 +23,27 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
   const [showCreateAccountPrompt, setShowCreateAccountPrompt] = useState(false);
   const [showWalletSection, setShowWalletSection] = useState(false);
   const [googleAuthAttempted, setGoogleAuthAttempted] = useState(false);
+
+  // Close modal when user is authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      onClose();
+      resetForm();
+    }
+  }, [user, loading, onClose]);
+
+  // Handle wallet connection success
+  useEffect(() => {
+    if (connected && publicKey && showWalletSection) {
+      // Give a moment for the wallet auth to process
+      setTimeout(() => {
+        if (user) {
+          onClose();
+          resetForm();
+        }
+      }, 1000);
+    }
+  }, [connected, publicKey, showWalletSection, user, onClose]);
 
   if (!isOpen) return null;
 
@@ -103,8 +124,8 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
       }
 
       if (result.success) {
-        onClose();
-        resetForm();
+        // Don't close modal here - let the useEffect handle it when user state updates
+        setLocalLoading(false);
       } else {
         const errorType = getErrorMessage(result.error || 'Authentication failed');
         
@@ -115,11 +136,11 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
         } else {
           setLocalError(errorType);
         }
+        setLocalLoading(false);
       }
     } catch (error) {
       console.error('Authentication error:', error);
       setLocalError('An unexpected error occurred. Please try again.');
-    } finally {
       setLocalLoading(false);
     }
   };
@@ -170,6 +191,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
     setShowCreateAccountPrompt(false);
     setShowWalletSection(false);
     setGoogleAuthAttempted(false);
+    setLocalLoading(false);
   };
 
   const switchMode = (newMode: 'signin' | 'signup') => {
@@ -216,14 +238,17 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
               {connected && publicKey ? (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                   <div className="flex items-center space-x-2 text-green-400 mb-2">
-                    <Wallet size={16} />
-                    <span className="font-medium">Wallet Connected!</span>
+                    <CheckCircle size={16} />
+                    <span className="font-medium">Wallet Connected Successfully!</span>
                   </div>
-                  <p className="text-green-300 text-sm font-mono break-all">
+                  <p className="text-green-300 text-sm font-mono break-all mb-2">
                     {publicKey.toString().substring(0, 8)}...{publicKey.toString().substring(-8)}
                   </p>
-                  <p className="text-green-300 text-xs mt-2">
-                    You can now close this dialog and start using PredictPro with your connected wallet.
+                  <p className="text-green-300 text-xs">
+                    {user ? 
+                      'You are now signed in and can start using PredictPro!' :
+                      'Setting up your account... This will close automatically.'
+                    }
                   </p>
                 </div>
               ) : (

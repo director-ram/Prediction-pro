@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export interface AuthUser {
   id: string;
@@ -12,6 +13,7 @@ export interface AuthUser {
 }
 
 export function useSupabaseAuth() {
+  const { connected, publicKey } = useWallet();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,86 @@ export function useSupabaseAuth() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Handle wallet connection for wallet-only authentication
+  useEffect(() => {
+    if (connected && publicKey && !session && !user) {
+      handleWalletOnlyAuth();
+    }
+  }, [connected, publicKey, session, user]);
+
+  const handleWalletOnlyAuth = async () => {
+    if (!connected || !publicKey) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const walletAddress = publicKey.toString();
+      
+      // Check if a user exists with this wallet address
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking existing wallet user:', fetchError);
+        setError('Failed to verify wallet');
+        setLoading(false);
+        return;
+      }
+
+      if (existingUser) {
+        // User exists with this wallet, sign them in
+        setUser({
+          id: existingUser.id,
+          email: existingUser.email || `${walletAddress.substring(0, 8)}@wallet.local`,
+          username: existingUser.username,
+          wallet_address: existingUser.wallet_address,
+          created_at: existingUser.created_at,
+          auth_provider: 'wallet'
+        });
+      } else {
+        // Create a new wallet-only user
+        const username = `wallet_${walletAddress.substring(0, 8)}`;
+        const email = `${walletAddress.substring(0, 8)}@wallet.local`;
+
+        // Create user with wallet authentication
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            username,
+            wallet_address: walletAddress,
+            email
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating wallet user:', createError);
+          setError('Failed to create wallet account');
+          setLoading(false);
+          return;
+        }
+
+        setUser({
+          id: newUser.id,
+          email: email,
+          username: newUser.username,
+          wallet_address: newUser.wallet_address,
+          created_at: newUser.created_at,
+          auth_provider: 'wallet'
+        });
+      }
+    } catch (error) {
+      console.error('Error in wallet-only auth:', error);
+      setError('Failed to authenticate with wallet');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
@@ -121,7 +203,8 @@ export function useSupabaseAuth() {
         .insert({
           id: supabaseUser.id,
           username,
-          wallet_address: null
+          wallet_address: null,
+          email: supabaseUser.email
         })
         .select()
         .single();
@@ -266,11 +349,19 @@ export function useSupabaseAuth() {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      setError(error.message);
-      return { success: false, error: error.message };
+    // Clear local state first
+    setUser(null);
+    setSession(null);
+    
+    // Sign out from Supabase if there's a session
+    if (session) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setError(error.message);
+        return { success: false, error: error.message };
+      }
     }
+    
     return { success: true };
   };
 
@@ -340,7 +431,7 @@ export function useSupabaseAuth() {
         return { success: false, error: error.message };
       }
 
-      setUser({ ...user, wallet_address: data.wallet_address });
+      setUser({ ...user, wallet_address: data.wallet_address, auth_provider: 'wallet' });
       return { success: true };
     } catch (error) {
       console.error('Error in connectWallet:', error);
