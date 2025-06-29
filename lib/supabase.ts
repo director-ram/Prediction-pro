@@ -16,7 +16,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce'
+    flowType: 'pkce',
+    debug: true // Enable debug mode for auth
   },
   global: {
     headers: {
@@ -35,16 +36,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Add error handling for Supabase client
-supabase.auth.onAuthStateChange((event, _session) => {
+// Enhanced error handling for Supabase client
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state change:', event, session?.user?.email);
+  
   if (event === 'SIGNED_OUT') {
     console.log('User signed out');
   }
   if (event === 'SIGNED_IN') {
-    console.log('User signed in');
+    console.log('User signed in successfully');
   }
   if (event === 'TOKEN_REFRESHED') {
     console.log('Token refreshed');
+  }
+  if (event === 'USER_UPDATED') {
+    console.log('User updated');
   }
 });
 

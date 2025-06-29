@@ -22,6 +22,7 @@ export function useSupabaseAuth() {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
       setSession(session);
       if (session?.user) {
         fetchUserProfile(session.user);
@@ -306,12 +307,18 @@ export function useSupabaseAuth() {
       // Get the current URL for redirect
       const currentUrl = window.location.origin;
       
-      console.log('Attempting Google OAuth with redirect to:', currentUrl);
+      console.log('🔍 Starting Google OAuth...');
+      console.log('Current URL:', currentUrl);
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+      // First, let's test if Supabase is properly configured
+      const { data: config, error: configError } = await supabase.auth.getSession();
+      console.log('Supabase session check:', { config, configError });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: currentUrl,
+          redirectTo: `${currentUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -320,8 +327,10 @@ export function useSupabaseAuth() {
         }
       });
 
+      console.log('Google OAuth response:', { data, error });
+
       if (error) {
-        console.error('Google OAuth error:', error);
+        console.error('❌ Google OAuth error:', error);
         
         // Provide more specific error messages based on error type
         let errorMessage = error.message;
@@ -343,13 +352,13 @@ export function useSupabaseAuth() {
         return { success: false, error: errorMessage };
       }
 
-      console.log('Google OAuth initiated successfully:', data);
+      console.log('✅ Google OAuth initiated successfully:', data);
       
       // Note: The actual sign-in completion will be handled by the auth state change listener
       // We don't set loading to false here because the redirect will happen
       return { success: true };
     } catch (error) {
-      console.error('Unexpected error during Google sign-in:', error);
+      console.error('💥 Unexpected error during Google sign-in:', error);
       const errorMessage = 'Google sign-in is currently unavailable. Please check your configuration and try again.';
       setError(errorMessage);
       setLoading(false);
