@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import MobileWalletButton from './MobileWalletButton';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, CheckCircle, Info, ExternalLink } from 'lucide-react';
+import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -169,7 +169,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
       }
     } catch (error) {
       console.error('Google authentication error:', error);
-      setLocalError('Google sign-in is currently unavailable. Please try email sign-in instead.');
+      setLocalError('Google sign-in encountered an error. Please try again or use email sign-in.');
       setLocalLoading(false);
     }
   };
@@ -285,29 +285,6 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
           ) : (
             /* Regular Auth Section */
             <>
-              {/* Google Auth Setup Notice */}
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Info className="text-yellow-400 mt-0.5 flex-shrink-0" size={20} />
-                  <div>
-                    <h4 className="text-yellow-400 font-medium mb-2">Google Sign-In Setup Required</h4>
-                    <p className="text-yellow-300 text-sm mb-3">
-                      Google authentication requires additional setup in the Supabase dashboard. 
-                      For now, please use email sign-in which works perfectly, or connect your crypto wallet directly.
-                    </p>
-                    <a
-                      href="/docs/GOOGLE_AUTH_SETUP.md"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 text-sm transition-colors"
-                    >
-                      <span>Setup Guide for Developers</span>
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
               {/* Create Account Prompt */}
               {showCreateAccountPrompt && (
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
@@ -341,11 +318,20 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
               <div className="space-y-3">
                 <button
                   onClick={handleGoogleAuth}
-                  disabled={true}
-                  className="w-full flex items-center justify-center space-x-3 bg-gray-500 text-gray-300 font-medium py-3 px-4 rounded-lg cursor-not-allowed opacity-50"
+                  disabled={localLoading || loading}
+                  className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 disabled:bg-gray-300 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
                 >
-                  <Chrome size={20} />
-                  <span>Continue with Google (Setup Required)</span>
+                  {(localLoading || loading) ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full"></div>
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Chrome size={20} />
+                      <span>Continue with Google</span>
+                    </>
+                  )}
                 </button>
 
                 <button
