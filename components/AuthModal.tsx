@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import MobileWalletButton from './MobileWalletButton';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink, Info, CheckCircle } from 'lucide-react';
+import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,7 +22,6 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
   const [localLoading, setLocalLoading] = useState(false);
   const [showCreateAccountPrompt, setShowCreateAccountPrompt] = useState(false);
   const [showWalletSection, setShowWalletSection] = useState(false);
-  const [googleAuthAttempted, setGoogleAuthAttempted] = useState(false);
 
   // Close modal when user is authenticated
   useEffect(() => {
@@ -156,7 +155,6 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
     setLocalError('');
     setLocalLoading(true);
     setShowCreateAccountPrompt(false);
-    setGoogleAuthAttempted(true);
 
     try {
       const result = await signInWithGoogle();
@@ -190,7 +188,6 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
     setShowPassword(false);
     setShowCreateAccountPrompt(false);
     setShowWalletSection(false);
-    setGoogleAuthAttempted(false);
     setLocalLoading(false);
   };
 
@@ -317,39 +314,15 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                 </div>
               )}
 
-              {/* Google Auth Notice */}
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Info className="text-yellow-400 mt-0.5 flex-shrink-0" size={20} />
-                  <div>
-                    <h4 className="text-yellow-400 font-medium mb-2">Google Sign-In Notice</h4>
-                    <p className="text-yellow-300 text-sm mb-3">
-                      Google authentication requires additional setup in the Supabase dashboard. 
-                      For now, please use email sign-in which works perfectly.
-                    </p>
-                    <a
-                      href="https://supabase.com/docs/guides/auth/social-login/auth-google"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 text-sm transition-colors"
-                    >
-                      <span>Setup Guide for Developers</span>
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
               {/* Auth Provider Buttons */}
               <div className="space-y-3">
                 <button
                   onClick={handleGoogleAuth}
-                  disabled={true}
-                  className="w-full flex items-center justify-center space-x-3 bg-gray-400 text-gray-600 font-medium py-3 px-4 rounded-lg cursor-not-allowed opacity-50"
-                  title="Google sign-in requires additional configuration"
+                  disabled={localLoading || loading}
+                  className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Chrome size={20} />
-                  <span>Continue with Google (Coming Soon)</span>
+                  <span>Continue with Google</span>
                 </button>
 
                 <button
