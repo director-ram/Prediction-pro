@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import MobileWalletButton from './MobileWalletButton';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
   const [localLoading, setLocalLoading] = useState(false);
   const [showCreateAccountPrompt, setShowCreateAccountPrompt] = useState(false);
   const [showWalletSection, setShowWalletSection] = useState(false);
+  const [googleAuthAttempted, setGoogleAuthAttempted] = useState(false);
 
   if (!isOpen) return null;
 
@@ -134,20 +135,22 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
     setLocalError('');
     setLocalLoading(true);
     setShowCreateAccountPrompt(false);
+    setGoogleAuthAttempted(true);
 
     try {
       const result = await signInWithGoogle();
       if (result.success) {
-        onClose();
-        resetForm();
+        // Don't close modal immediately - wait for auth state change
+        // The modal will close when the user is successfully authenticated
+        setLocalLoading(false);
       } else {
         const errorType = getErrorMessage(result.error || 'Google authentication failed');
         setLocalError(errorType);
+        setLocalLoading(false);
       }
     } catch (error) {
       console.error('Google authentication error:', error);
       setLocalError('An unexpected error occurred with Google authentication. Please try again.');
-    } finally {
       setLocalLoading(false);
     }
   };
@@ -166,6 +169,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
     setShowPassword(false);
     setShowCreateAccountPrompt(false);
     setShowWalletSection(false);
+    setGoogleAuthAttempted(false);
   };
 
   const switchMode = (newMode: 'signin' | 'signup') => {
@@ -288,15 +292,48 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                 </div>
               )}
 
+              {/* Google Auth Configuration Notice */}
+              {googleAuthAttempted && localError && localError.includes('not properly configured') && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="text-yellow-400 mt-0.5" size={20} />
+                    <div>
+                      <h4 className="text-yellow-400 font-medium mb-2">Google Sign-In Setup Required</h4>
+                      <p className="text-yellow-300 text-sm mb-3">
+                        Google authentication needs to be configured in the Supabase dashboard. Please use email sign-in for now.
+                      </p>
+                      <a
+                        href="https://supabase.com/docs/guides/auth/social-login/auth-google"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 text-sm transition-colors"
+                      >
+                        <span>Setup Guide</span>
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Auth Provider Buttons */}
               <div className="space-y-3">
                 <button
                   onClick={handleGoogleAuth}
                   disabled={localLoading || loading}
-                  className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 disabled:bg-gray-200 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Chrome size={20} />
-                  <span>Continue with Google</span>
+                  {localLoading && googleAuthAttempted ? (
+                    <>
+                      <div className="animate-spin w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full"></div>
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Chrome size={20} />
+                      <span>Continue with Google</span>
+                    </>
+                  )}
                 </button>
 
                 <button
@@ -376,7 +413,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   </div>
                 </div>
 
-                {localError && (
+                {localError && !localError.includes('not properly configured') && (
                   <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     {localError}
                   </div>
@@ -387,7 +424,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   disabled={localLoading || loading}
                   className="w-full flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
                 >
-                  {localLoading || loading ? (
+                  {(localLoading || loading) && !googleAuthAttempted ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
                       <span>Please wait...</span>
