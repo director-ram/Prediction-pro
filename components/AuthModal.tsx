@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 import { useWallet } from '@solana/wallet-adapter-react';
 import MobileWalletButton from './MobileWalletButton';
-import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Mail, Chrome, Wallet, Eye, EyeOff, AlertCircle, ExternalLink, Info } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -150,7 +150,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
       }
     } catch (error) {
       console.error('Google authentication error:', error);
-      setLocalError('An unexpected error occurred with Google authentication. Please try again.');
+      setLocalError('Google sign-in is currently unavailable. Please try email sign-in instead.');
       setLocalLoading(false);
     }
   };
@@ -292,48 +292,39 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                 </div>
               )}
 
-              {/* Google Auth Configuration Notice */}
-              {googleAuthAttempted && localError && localError.includes('not properly configured') && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="text-yellow-400 mt-0.5" size={20} />
-                    <div>
-                      <h4 className="text-yellow-400 font-medium mb-2">Google Sign-In Setup Required</h4>
-                      <p className="text-yellow-300 text-sm mb-3">
-                        Google authentication needs to be configured in the Supabase dashboard. Please use email sign-in for now.
-                      </p>
-                      <a
-                        href="https://supabase.com/docs/guides/auth/social-login/auth-google"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 text-sm transition-colors"
-                      >
-                        <span>Setup Guide</span>
-                        <ExternalLink size={14} />
-                      </a>
-                    </div>
+              {/* Google Auth Notice */}
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="text-yellow-400 mt-0.5 flex-shrink-0" size={20} />
+                  <div>
+                    <h4 className="text-yellow-400 font-medium mb-2">Google Sign-In Notice</h4>
+                    <p className="text-yellow-300 text-sm mb-3">
+                      Google authentication requires additional setup in the Supabase dashboard. 
+                      For now, please use email sign-in which works perfectly.
+                    </p>
+                    <a
+                      href="https://supabase.com/docs/guides/auth/social-login/auth-google"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 text-sm transition-colors"
+                    >
+                      <span>Setup Guide for Developers</span>
+                      <ExternalLink size={14} />
+                    </a>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Auth Provider Buttons */}
               <div className="space-y-3">
                 <button
                   onClick={handleGoogleAuth}
-                  disabled={localLoading || loading}
-                  className="w-full flex items-center justify-center space-x-3 bg-white hover:bg-gray-100 disabled:bg-gray-200 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={true}
+                  className="w-full flex items-center justify-center space-x-3 bg-gray-400 text-gray-600 font-medium py-3 px-4 rounded-lg cursor-not-allowed opacity-50"
+                  title="Google sign-in requires additional configuration"
                 >
-                  {localLoading && googleAuthAttempted ? (
-                    <>
-                      <div className="animate-spin w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full"></div>
-                      <span>Connecting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Chrome size={20} />
-                      <span>Continue with Google</span>
-                    </>
-                  )}
+                  <Chrome size={20} />
+                  <span>Continue with Google (Coming Soon)</span>
                 </button>
 
                 <button
@@ -352,7 +343,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   <div className="w-full border-t border-white/20"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-transparent text-gray-400">or</span>
+                  <span className="px-2 bg-transparent text-gray-400">or use email</span>
                 </div>
               </div>
 
@@ -413,7 +404,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   </div>
                 </div>
 
-                {localError && !localError.includes('not properly configured') && (
+                {localError && (
                   <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     {localError}
                   </div>
@@ -424,7 +415,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   disabled={localLoading || loading}
                   className="w-full flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
                 >
-                  {(localLoading || loading) && !googleAuthAttempted ? (
+                  {(localLoading || loading) ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
                       <span>Please wait...</span>
@@ -432,7 +423,7 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                   ) : (
                     <>
                       <Mail size={18} />
-                      <span>{mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
+                      <span>{mode === 'signin' ? 'Sign In with Email' : 'Create Account with Email'}</span>
                     </>
                   )}
                 </button>
@@ -446,8 +437,8 @@ export default function AuthModal({ isOpen, onClose, onWalletConnect }: AuthModa
                     className="text-purple-400 hover:text-purple-300 text-sm transition-colors"
                   >
                     {mode === 'signin' 
-                      ? "Don't have an account? Sign up" 
-                      : "Already have an account? Sign in"
+                      ? "Don't have an account? Sign up with email" 
+                      : "Already have an account? Sign in with email"
                     }
                   </button>
                 </div>
