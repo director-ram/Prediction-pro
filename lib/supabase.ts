@@ -63,18 +63,21 @@ export type Database = {
           wallet_address: string;
           username: string;
           created_at: string | null;
+          email?: string;
         };
         Insert: {
           id?: string;
-          wallet_address: string;
+          wallet_address?: string;
           username: string;
           created_at?: string | null;
+          email?: string;
         };
         Update: {
           id?: string;
           wallet_address?: string;
           username?: string;
           created_at?: string | null;
+          email?: string;
         };
       };
       predictions: {
